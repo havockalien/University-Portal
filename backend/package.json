@@ -5,8 +5,7 @@
   "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "build": "npx esbuild server.js --bundle --platform=node --packages=external --outfile=api/index.js --format=esm"
+    "start": "node server.js"
   },
   "author": "",
   "license": "ISC",

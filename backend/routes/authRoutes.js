@@ -83,20 +83,14 @@ router.post("/student-request-otp", async (req, res) => {
       email: student.email,
     });
 
-    // ── Send OTP via Email ────────────────────────────────────
+    // ── Send OTP via Vercel Microservice ────────────────────────────────
     try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.SMTP_EMAIL,
-          pass: process.env.SMTP_PASSWORD,
-        },
-      });
-
-      await transporter.sendMail({
-        from: `"RV University Portal" <${process.env.SMTP_EMAIL}>`,
+      const axios = (await import("axios")).default; // Inline dynamic import
+      
+      const emailPayload = {
         to: student.email,
         subject: "Your Login OTP — RV University Portal",
+        authSecret: process.env.JWT_SECRET,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 460px; margin: auto; padding: 30px; background: #1e1b4b; border-radius: 16px; color: #fff;">
             <h2 style="text-align: center; margin-bottom: 8px;">🎓 RV University Portal</h2>
@@ -109,9 +103,11 @@ router.post("/student-request-otp", async (req, res) => {
             <p style="text-align: center; color: #818cf8; font-size: 13px;">This OTP is valid for <strong>5 minutes</strong>.</p>
             <p style="text-align: center; color: #6366f1; font-size: 11px; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
           </div>
-        `,
-      });
-      console.log(`📧 OTP sent to ${student.email} for ${student.name} (${usn})`);
+        `
+      };
+
+      await axios.post("https://university-portal-topaz.vercel.app/api/mailer", emailPayload);
+      console.log(`📧 OTP proxy triggered successfully for ${student.email}`);
     } catch (emailErr) {
       console.error("Email send failed:", emailErr.message);
       // Fallback: log OTP to console
