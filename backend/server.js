@@ -82,9 +82,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", db: isDbConnected ? "connected" : "disconnected" });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  connectDB();
-});
+// Ensure DB connects directly (essential for Serverless lambdas)
+connectDB();
+
+// Only listen locally, Vercel will handle its own routing hooks natively
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running locally on port ${PORT}`);
+  });
+}
+
+export default app;
