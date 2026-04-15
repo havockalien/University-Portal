@@ -57,7 +57,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // Only listen locally, Vercel will handle its own routing hooks natively
-if (process.env.NODE_ENV !== "production") {
+if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running locally on port ${PORT}`);
