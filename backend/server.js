@@ -56,12 +56,10 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", db: mongoose.connections[0].readyState ? "connected" : "disconnected" });
 });
 
-// Only listen locally, Vercel will handle its own routing hooks natively
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running locally on port ${PORT}`);
-  });
-}
+// Standard Node listener for Render / Dedicated Hosts
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
 
 export default app;
