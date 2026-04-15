@@ -18,49 +18,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── MongoDB Connection with retry logic ──────────────────────────
-let isDbConnected = false;
-
-const connectDB = async (retries = 5, delay = 5000) => {
-  for (let i = 1; i <= retries; i++) {
-    try {
-      console.log(`📡 MongoDB connection attempt ${i}/${retries}...`);
-      await mongoose.connect(process.env.MONGO_URL, {
-        serverSelectionTimeoutMS: 10000,
-        socketTimeoutMS: 45000,
-      });
-      isDbConnected = true;
-      console.log("✅ MongoDB connected successfully");
-      return;
-    } catch (err) {
-      console.error(`❌ Attempt ${i} failed: ${err.message}`);
-      if (i < retries) {
-        console.log(`⏳ Retrying in ${delay / 1000}s...`);
-        await new Promise((r) => setTimeout(r, delay));
-      }
-    }
+// ── Serverless Native MongoDB Connection ────────────────────────
+const connectDB = async () => {
+  if (mongoose.connections[0].readyState) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URL, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    console.log("✅ MongoDB connected natively");
+  } catch (err) {
+    console.error("🚨 MongoDB failed:", err.message);
   }
-  console.error("🚨 All MongoDB connection attempts failed. Server will run without DB.");
 };
 
-// Monitor connection events
-mongoose.connection.on("disconnected", () => {
-  isDbConnected = false;
-  console.log("⚠️  MongoDB disconnected");
-});
-
-mongoose.connection.on("reconnected", () => {
-  isDbConnected = true;
-  console.log("✅ MongoDB reconnected");
-});
-
-// Middleware to check DB connection before DB-dependent routes
-app.use("/api", (req, res, next) => {
-  if (!isDbConnected) {
-    return res.status(503).json({
-      error: "Database is currently unavailable. Please try again later.",
-      dbStatus: "disconnected",
-    });
+app.use(async (req, res, next) => {
+  await connectDB();
+  if (!mongoose.connections[0].readyState && req.path !== "/" && req.path !== "/api/health") {
+    return res.status(503).json({ error: "Database offline" });
   }
   next();
 });
@@ -75,15 +49,12 @@ app.use("/api/admin", adminRoutes);
 
 // Health check
 app.get("/", (req, res) => {
-  res.json({ status: "Backend running", db: isDbConnected ? "connected" : "disconnected" });
+  res.json({ status: "Backend running", db: mongoose.connections[0].readyState ? "connected" : "disconnected" });
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", db: isDbConnected ? "connected" : "disconnected" });
+  res.json({ status: "ok", db: mongoose.connections[0].readyState ? "connected" : "disconnected" });
 });
-
-// Ensure DB connects directly (essential for Serverless lambdas)
-connectDB();
 
 // Only listen locally, Vercel will handle its own routing hooks natively
 if (process.env.NODE_ENV !== "production") {
