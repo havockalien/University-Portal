@@ -64,7 +64,4 @@ if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   });
 }
 
-// Safely execute Express routing for Serverless integration
-export default function handler(req, res) {
-  return app(req, res);
-}
+export default app;
